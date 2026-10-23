@@ -16,8 +16,8 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.colors import LogNorm
 from work_dir import MCSTAS_DIR, OUTPUT_DIR
 
-from mcstas_to_sqe.mcstas.nexus_io import read_scan
 from mcstas_to_sqe.mcstas.run_folders import latest_run
+from mcstas_to_sqe.reduction import read_scan
 
 
 def plot_scan_2d(

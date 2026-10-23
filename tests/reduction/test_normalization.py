@@ -6,8 +6,15 @@ import mcstastox
 import numpy as np
 import pytest
 
-from mcstas_to_sqe.mcstas.nexus_io import numeric_parameters, read_scan
-from mcstas_to_sqe.reduction import find_peaks, normalize_scan, run_wavelength, to_Q, wavelength
+from mcstas_to_sqe.mcstas.nexus_io import numeric_parameters
+from mcstas_to_sqe.reduction import (
+    find_peaks,
+    normalize_scan,
+    read_scan,
+    run_wavelength,
+    to_Q,
+    wavelength,
+)
 from mcstas_to_sqe.reduction.peaks import load_points
 
 DATA = Path(__file__).parents[1] / "data" / "split_run"

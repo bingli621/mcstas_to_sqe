@@ -20,9 +20,14 @@ from matplotlib.colors import LogNorm
 from work_dir import MCSTAS_DIR, OUTPUT_DIR
 
 from mcstas_to_sqe.mcstas import run_folders
-from mcstas_to_sqe.mcstas.nexus_io import read_scan
 from mcstas_to_sqe.mcstas.run_folders import latest_run
-from mcstas_to_sqe.reduction import normalize_scan, run_wavelength, to_Q, to_sample_frame
+from mcstas_to_sqe.reduction import (
+    normalize_scan,
+    read_scan,
+    run_wavelength,
+    to_Q,
+    to_sample_frame,
+)
 
 
 def plot_scan_Q(

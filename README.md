@@ -32,9 +32,8 @@ import numpy as np
 
 from mcstas_to_sqe.instruments import Params, SingleCrystalDiffractometer
 from mcstas_to_sqe.io import load, save
-from mcstas_to_sqe.mcstas.nexus_io import read_scan
 from mcstas_to_sqe.mcstas.simulation import Simulation
-from mcstas_to_sqe.reduction import find_peaks
+from mcstas_to_sqe.reduction import find_peaks, read_scan
 from mcstas_to_sqe.samples import la2ni7
 
 # an instrument: made in code, or the default with a file laid over it

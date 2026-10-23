@@ -1,21 +1,67 @@
-"""Momentum transfer in the lab and sample frames.
+"""Diffractometer scans, and momentum transfer in the lab and sample frames.
 
-Works on the pixel DataArrays returned by :func:`mcstas_to_sqe.mcstas.nexus_io.read_scan`.
+:func:`read_scan` reads the pixels of a diffractometer scan; the other functions work on them.
 """
 
 from collections.abc import Mapping
+from pathlib import Path
 
 import numpy as np
 import scipp as sc
 from scippneutron.conversion.graph import beamline, tof
 
 from mcstas_to_sqe.core.geometry import rotation
+from mcstas_to_sqe.mcstas.nexus_io import read_pixels
 
 # scippneutron graph: positions -> two_theta (angle between ki and kf) -> momentum transfer
 Q_GRAPH = {
     **beamline.beamline(scatter=True),
     **tof.elastic_Q_vec("wavelength"),  # Qx, Qy, Qz, Q_vec
 }
+
+
+def read_scan(
+    folder: str | Path,
+    component: str = "detector",
+    source: str = "source",
+    sample: str = "sample_pos",
+) -> list[tuple[dict[str, float], sc.DataArray]]:
+    """Read every scan point of a diffractometer run, with its banana-detector coords.
+
+    Parameters
+    ----------
+    folder:
+        Run folder with the ``mccode.h5`` to read.
+    component:
+        Name of the detector component.
+    source:
+        Name of the source component.
+    sample:
+        Name of the sample position component.
+
+    Returns
+    -------
+    :
+        One ``(parameters, pixels)`` per scan point, as :func:`.read_pixels` gives, with two
+        more coords:
+
+        - ``gamma``: the signed in-plane scattering angle in deg, negative to the right of the
+          beam (not scippneutron's ``two_theta``, the full angle between ki and kf);
+        - ``y``: the height above the sample in m.
+
+    Notes
+    -----
+    A split run (``scan_from_sample``) has no source in its file. The beam runs along +z at the
+    sample, so its ``source_position`` is put 1 m upstream along -z.
+    """
+    points = read_pixels(folder, component, source, sample, beam_direction=[0, 0, 1])
+    for _params, pixels in points:
+        x, y, z = (pixels.coords["position"].values - pixels.coords["sample_position"].values).T
+        pixels.coords["gamma"] = sc.array(
+            dims=["pixel_id"], values=np.degrees(np.arctan2(x, z)), unit="deg"
+        )
+        pixels.coords["y"] = sc.array(dims=["pixel_id"], values=y, unit="m")
+    return points
 
 
 def wavelength(energy_meV: float) -> sc.Variable:

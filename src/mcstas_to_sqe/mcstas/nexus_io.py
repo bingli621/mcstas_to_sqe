@@ -1,7 +1,9 @@
 """Read and write McStas NeXus (HDF5) output.
 
-- :func:`read_scan` reads a scan with mcstastox.
+- :func:`read_pixels` reads the detector pixels of every scan point, with mcstastox.
 - :func:`merge_entries` merges single-run files into one scan file.
+
+Nothing here knows an instrument: the components to read are named by the caller.
 
 A scan file holds one entry per scan point (entry1, entry2, ...). Reading it needs the mcstastox
 branch with ``entry_number`` support (https://github.com/mads-bertelsen-agentic/McStasToX,
@@ -16,6 +18,7 @@ import h5py
 import mcstastox
 import numpy as np
 import scipp as sc
+from numpy.typing import ArrayLike
 
 
 def numeric_parameters(parameters: Mapping[str, Any]) -> dict[str, float]:
@@ -40,24 +43,30 @@ def numeric_parameters(parameters: Mapping[str, Any]) -> dict[str, float]:
     return numeric
 
 
-def read_scan(
+def read_pixels(
     folder: str | Path,
-    component: str = "detector",
-    source: str = "source",
-    sample: str = "sample_pos",
+    detector: str,
+    source: str,
+    sample: str,
+    beam_direction: ArrayLike | None = None,
 ) -> list[tuple[dict[str, float], sc.DataArray]]:
-    """Read every scan point of a McStas NeXus file.
+    """Read the detector pixels of every scan point of a McStas NeXus file.
 
     Parameters
     ----------
     folder:
         Run folder with the ``mccode.h5`` to read.
-    component:
-        Name of the detector component.
+    detector:
+        Name of the detector component, which must record an event list.
     source:
         Name of the source component.
     sample:
-        Name of the sample position component.
+        Name of the component at the sample position.
+    beam_direction:
+        Lab-frame direction of the beam at the sample, for a file without ``source``, such as a
+        run started from a beam file at the sample. The source is then put 1 m upstream of the
+        sample along it, which gives the incident direction; the distance does not matter. If
+        ``None``, a file without ``source`` raises.
 
     Returns
     -------
@@ -65,17 +74,14 @@ def read_scan(
         One ``(parameters, pixels)`` per scan point:
 
         - ``parameters``: the numeric instrument parameters of the point.
-        - ``pixels``: intensity summed per pixel, over ``pixel_id``. Only pixels that were hit
-          are included. Coords are ``position``, ``pixel_id``, ``gamma`` and ``y``.
-          ``gamma`` is the signed in-plane scattering angle in deg, negative to the right of the
-          beam (not scippneutron's ``two_theta``, the full angle between ki and kf). ``y`` is the
-          height above the sample in m.
+        - ``pixels``: event weights summed per pixel, over ``pixel_id``. Only pixels that were
+          hit are included. The coords are those mcstastox gives, including ``position``,
+          ``sample_position`` and ``source_position``.
 
-    Notes
-    -----
-    A split run (``scan_from_sample``) has no source in its file. Its ``source_position`` is
-    then put 1 m upstream of the sample along the beam (+z), which gives the right incident
-    direction for the elastic Q; the distance does not matter.
+    Raises
+    ------
+    ValueError
+        If the file has no ``source`` and ``beam_direction`` is ``None``.
     """
     points = []
     with mcstastox.Read(str(folder)) as data:
@@ -84,20 +90,20 @@ def read_scan(
     for entry in range(1, n_entries + 1):
         with mcstastox.Read(str(folder), entry_number=entry) as data:
             params = numeric_parameters(data.get_instrument_parameters())
-            sample_pos = data.get_global_component_coordinates(sample)
             try:
-                grouped = data.export_scipp(source, sample, component_name=component)["events"]
-            except ValueError:  # no source in the file: a split run
-                grouped = data.export_scipp(sample, sample, component_name=component)["events"]
-                grouped.coords["source_position"] = sc.vector(sample_pos - [0, 0, 1.0], unit="m")
+                grouped = data.export_scipp(source, sample, component_name=detector)["events"]
+            except ValueError as error:  # no source in the file, e.g. a run from a beam file
+                if beam_direction is None:
+                    raise ValueError(
+                        f"{folder}: no component {source!r}; give beam_direction to read it"
+                    ) from error
+                sample_pos = data.get_global_component_coordinates(sample)
+                upstream = np.asarray(beam_direction, float)
+                upstream = upstream / np.linalg.norm(upstream)
+                grouped = data.export_scipp(sample, sample, component_name=detector)["events"]
+                grouped.coords["source_position"] = sc.vector(sample_pos - upstream, unit="m")
 
-        pixels = grouped.bins.sum()  # events are grouped by pixel id; sum the weights
-        x, y, z = (pixels.coords["position"].values - sample_pos).T
-        pixels.coords["gamma"] = sc.array(
-            dims=["pixel_id"], values=np.degrees(np.arctan2(x, z)), unit="deg"
-        )
-        pixels.coords["y"] = sc.array(dims=["pixel_id"], values=y, unit="m")
-        points.append((params, pixels))
+        points.append((params, grouped.bins.sum()))  # events are grouped by pixel id
     return points
 
 

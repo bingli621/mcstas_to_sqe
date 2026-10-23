@@ -1,4 +1,4 @@
-"""Simulate an instrument into McStas NeXus (HDF5) output, read with :func:`.read_scan`.
+"""Simulate an instrument into McStas NeXus (HDF5) output, read with :func:`.read_pixels`.
 
 A :class:`Simulation` holds the instrument to simulate and the folder its runs write to. It
 offers:
