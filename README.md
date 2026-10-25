@@ -12,9 +12,9 @@ McStasScript (`inst.show_instrument(backend="matplotlib_2d", projection="zx")`;
 
 ![Top view of the diffractometer](output/top_view_zx.png)
 
-An omega scan of La2Ni7 over 132 points, in momentum transfer, normalized (`scripts/plot_scan_Q.py`):
+An omega scan of La2Ni7 over 132 points, in the (2H, H, L) plane, normalized (`scripts/plot_scan_hkl.py`):
 
-![Normalized Q map of an omega scan](output/scan_Q_normalized_132pts.gif)
+![Normalized (2H, H, L) map of an omega scan](output/scan_hkl_normalized.gif)
 
 ## Use
 
@@ -23,6 +23,7 @@ pixi run python scripts/build_instrument.py   # the .instr file and its diagram
 pixi run python scripts/run_mcstas.py         # simulate (edit MODE: a run, a scan, or a split run)
 pixi run python scripts/plot_scan_2d.py       # output/scan.gif
 pixi run python scripts/plot_scan_Q.py        # output/scan_Q.gif
+pixi run python scripts/plot_scan_hkl.py      # output/scan_hkl_normalized.gif
 pixi run python scripts/print_peaks.py        # peak list of the newest scan
 pixi run pytest --cov=mcstas_to_sqe           # tests and coverage
 pixi run pre-commit install                   # once: ruff format on every commit
