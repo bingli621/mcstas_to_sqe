@@ -7,8 +7,8 @@ tools to read the McStas NeXus output (McStasToX, scippneutron) and convert it t
 It comes with a single-crystal diffractometer with a three-axis goniometer, and ready-made samples.
 
 The diffractometer with La2Ni7 at omega 30 deg, seen from above, its goniometer arms as axes, drawn by
-McStasScript (`d.draw()` shows it and the view from the side;
-`d.draw(("zx",), "output/top_view.png")` saves this one):
+McStasScript (`inst.show_instrument(backend="matplotlib_2d", projection="zx")`;
+`projection="zy"` for the view from the side):
 
 ![Top view of the diffractometer](output/top_view_zx.png)
 

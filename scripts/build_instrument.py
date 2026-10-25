@@ -4,18 +4,17 @@ run_mcstas.py simulates it.
 
 In VS Code: run this file, or from a notebook/Interactive Window:
 
-    from build_instrument import create_instrument, create_mcstas, plot_instrument
+    from build_instrument import create_instrument, create_mcstas
     scd = create_instrument()
     inst = create_mcstas(scd, plot=False)
     inst.show_diagram()
-    plot_instrument(inst)
+    inst.show_instrument(backend="matplotlib_2d", projection="zx")
 """
 
 from work_dir import WORK_DIR
 
 from mcstas_to_sqe.instruments import Params, SingleCrystalDiffractometer
 from mcstas_to_sqe.mcstas.builder import build_mcstas, default_input_dir
-from mcstas_to_sqe.mcstas.display import draw
 from mcstas_to_sqe.samples import la2ni7
 
 
@@ -52,12 +51,7 @@ def create_mcstas(instrument, input_path=None, plot=True):
     return inst
 
 
-def plot_instrument(instrument, **kwargs):
-    """Show `instrument` from above and from the side with McStasScript."""
-    draw(instrument, **kwargs)
-
-
 if __name__ == "__main__":
     scd = create_instrument(params=Params(omega=30))
     inst = create_mcstas(scd, plot=False)
-    plot_instrument(inst)
+    inst.show_instrument(backend="matplotlib_2d", projection="zx")

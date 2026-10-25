@@ -1,6 +1,5 @@
 from dataclasses import FrozenInstanceError
 
-import matplotlib.pyplot as plt
 import pytest
 
 from mcstas_to_sqe.core import Slit, Source_simple
@@ -102,19 +101,3 @@ def test_a_component_saves_its_mcstas_component_when_created():
     assert slit.component_name == "Slit"
     assert "component_name" not in to_dict(Diffractometer())["slit"]  # not saved
     assert slit == Slit(xwidth=0.01, yheight=0.01, at=[0, 0, 1.0])  # nor compared
-
-
-@pytest.mark.filterwarnings("ignore:FigureCanvasAgg is non-interactive")
-def test_mcstasscript_draws_the_top_and_side_views():
-    plt.switch_backend("Agg")  # no windows
-    plt.close("all")
-    cfg = Diffractometer(aluminum(at=[0, 0, 0], relative="gonio_phi"), Params(omega=30))
-    cfg.draw()
-    assert len(plt.get_fignums()) == 2
-
-
-def test_draw_saves_one_file_per_view(tmp_path):
-    cfg = Diffractometer(aluminum(at=[0, 0, 0], relative="gonio_phi"), Params(omega=30))
-    saved = cfg.draw(path=tmp_path / "view.png")
-    assert saved == [tmp_path / "view_zx.png", tmp_path / "view_zy.png"]
-    assert all(f.read_bytes().startswith(b"\x89PNG") for f in saved)

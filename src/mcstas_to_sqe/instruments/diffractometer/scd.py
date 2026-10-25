@@ -13,8 +13,6 @@ a YAML file, and mcstas/builder.py builds the McStas instrument from it.
 """
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 from mcstas_to_sqe.core.base import Instrument
 from mcstas_to_sqe.core.components import (
@@ -141,21 +139,3 @@ class SingleCrystalDiffractometer(Instrument):
             InstrParam("chi", p.chi, "deg", "goniometer rotation about -Z"),
             InstrParam("phi", p.phi, "deg", "goniometer rotation about +X"),
         ]
-
-    def draw(
-        self,
-        projections: tuple[str, ...] = ("zx", "zy"),
-        path: str | Path | None = None,
-        **kwargs: Any,
-    ) -> list[Path]:
-        """Show, or save to ``path``, the top and side views at the current angles.
-
-        Drawn by McStasScript; see :func:`.display.draw`.
-        """
-        import tempfile
-
-        from mcstas_to_sqe.mcstas.builder import build_mcstas
-        from mcstas_to_sqe.mcstas.display import draw
-
-        with tempfile.TemporaryDirectory() as folder:  # McStasScript writes its files here
-            return draw(build_mcstas(self, input_path=folder), projections, path, **kwargs)
