@@ -426,6 +426,9 @@ class Simulation:
             run_name="beam",
             comment=f"{ncount:g} neutrons",
             filename='"beam.mcpl"',
+            # the ray count is stored in the file and the weights scaled by it (McStas >= 3.10
+            # default; the raw weights of mode 2 are deprecated)
+            weight_mode=1,
         )
         inst.backengine()
         self.beam_file = output_path / "beam.mcpl.gz"
@@ -436,6 +439,7 @@ class Simulation:
         folder_name: str | None = None,
         beam_file: str | Path | None = None,
         seed: int | None = None,
+        mpi: int | str = "auto",
         **instr_params: float,
     ) -> Path:
         """Simulate ``sample_pos`` -> sample -> detector once, from a beam file.
@@ -451,6 +455,8 @@ class Simulation:
             Beam file to start from. If ``None``, :attr:`beam_file`.
         seed:
             Random seed. If ``None``, McStas picks one.
+        mpi:
+            Number of MPI processes, or ``"auto"``. Each reads its own part of the beam file.
         **instr_params:
             Instrument parameters by McStas name. The wavelength must be that of the beam file.
 
@@ -475,8 +481,7 @@ class Simulation:
             increment_folder_name=False,
             suppress_output=True,
             output_path=str(output_path),
-            # no MPI (None, though McStasScript hints str): the ranks would repeat the beam file
-            mpi=None,  # pyright: ignore[reportArgumentType]
+            mpi=mpi,
             force_compile=True,
             seed=seed,
         )
@@ -540,7 +545,7 @@ class Simulation:
             NeXus=True,
             increment_folder_name=False,
             suppress_output=True,
-            # no MPI (None, though McStasScript hints str): the ranks would repeat the beam file
+            # no MPI (None, though McStasScript hints str): the points run in parallel instead
             mpi=None,  # pyright: ignore[reportArgumentType]
         )
         inst.run_from(sample_pos, filename=f'"{beam_file}"')

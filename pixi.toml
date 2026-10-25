@@ -8,19 +8,19 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-mcstas = ">=3.9.1,<4"
-mcstasscript = ">=0.0.94,<0.0.95"
-scipp = ">=25.12.0,<26"
+mcstas = ">=3.10.0,<4"
+mcstasscript = ">=0.0.96,<0.0.97"
+scipp = ">=25.12.0,<27"
 pytest = ">=9.1.1,<10"
-scippneutron = ">=26.9.1,<27"
+scippneutron = ">=26.10.0,<27"
 matplotlib = ">=3.11.2,<4"
 pytest-cov = ">=7.1.0,<8"
-pyyaml = ">=6,<7"
+pyyaml = ">=6.0.3,<7"
 pre-commit = ">=4.7.0,<5"
 tabulate = ">=0.10.0,<0.11"
-numpy = ">=1.26"
-scipy = ">=1.11"
-h5py = ">=3.10"
+numpy = ">=2.5.4,<3"
+scipy = ">=1.18.1,<2"
+h5py = ">=3.16.0,<4"
 
 [pypi-dependencies]
 mcstas_to_sqe = { path = ".", editable = true }
