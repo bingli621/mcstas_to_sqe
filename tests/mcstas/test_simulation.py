@@ -121,3 +121,13 @@ def test_no_points_raises_before_anything(tmp_path):
     with pytest.raises(ValueError, match="at least one point"):
         _run_points_in_parallel(_FakeRun(), tmp_path / "scan", [])
     assert not (tmp_path / "scan").exists()
+
+
+def test_a_simulation_finds_and_cleans_its_own_runs(tmp_path, finished_run):
+    beam = finished_run(tmp_path / "1_run_to_sample", 1, beam=True)
+    scans = [finished_run(tmp_path / f"{n}_scan_omega", n) for n in (2, 3)]
+    sim = Simulation(SingleCrystalDiffractometer(), output_dir=tmp_path)
+    assert sim.list_runs() == ["3_scan_omega", "2_scan_omega", "1_run_to_sample"]
+    assert sim.latest_run("*_run_to_sample") == beam
+    assert sim.clean_runs(keep=1) == [scans[0]]
+    assert sim.list_runs() == ["3_scan_omega", "1_run_to_sample"]

@@ -105,6 +105,6 @@ instrument.
 
 Outputs go to the work folder: the current folder for the library, the repository for the
 scripts. Set `MCSTAS_TO_SQE_WORKDIR` or pass `Simulation(d, work_dir=...)` to move them.
-`mcstas.run_folders` lists, finds and cleans runs (`list_runs`, `latest_run`, `clean_runs`).
+`Simulation` lists, finds and cleans its runs (`list_runs`, `latest_run`, `clean_runs`).
 
 `mcstastox` is installed from its `entry_choice` branch, which can read individual scan entries.

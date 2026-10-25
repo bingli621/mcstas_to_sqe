@@ -30,7 +30,14 @@ from numpy.typing import ArrayLike
 
 from mcstas_to_sqe.mcstas.builder import build_mcstas, default_input_dir
 from mcstas_to_sqe.mcstas.nexus_io import merge_entries
-from mcstas_to_sqe.mcstas.run_folders import default_output_dir, latest_beam, run_folder
+from mcstas_to_sqe.mcstas.run_folders import (
+    clean_runs,
+    default_output_dir,
+    latest_beam,
+    latest_run,
+    list_runs,
+    run_folder,
+)
 
 if TYPE_CHECKING:
     from mcstasscript.interface.instr import McStas_instr
@@ -174,7 +181,8 @@ class Simulation:
     ``<time>_run``, ``<time>_scan_<variable>``, ``<time>_run_to_sample``,
     ``<time>_run_from_sample`` and ``<time>_scan_<variable>_from_sample``, with ``<time>`` e.g.
     ``20261022-143005``. A ``folder_name`` names the folder instead, and it is then replaced on
-    every run. :func:`.clean_runs` removes older runs, never a ``run_to_sample`` one.
+    every run. :meth:`list_runs` and :meth:`latest_run` find finished runs, and :meth:`clean_runs`
+    removes older ones, never a ``run_to_sample`` one.
 
     The ``instr_params`` of a run are its instrument parameters by McStas name: ``omega``,
     ``chi``, ``phi`` (deg) and ``wavelength`` (Å). Those not given keep the instrument's values;
@@ -192,6 +200,50 @@ class Simulation:
         self.output_dir = Path(output_dir or default_output_dir(work_dir))
         self.input_dir = Path(input_dir or default_input_dir(instrument, work_dir))
         self.beam_file = latest_beam(self.output_dir)
+
+    def list_runs(self) -> list[str]:
+        """List the finished runs in ``output_dir``, newest first; see :func:`.list_runs`."""
+        return list_runs(self.output_dir)
+
+    def latest_run(self, pattern: str = "*") -> Path:
+        """Return the newest finished run matching ``pattern``; see :func:`.latest_run`."""
+        return latest_run(self.output_dir, pattern)
+
+    def clean_runs(self, keep: int = 5) -> list[Path]:
+        """Remove all but the ``keep`` newest runs; see :func:`.clean_runs`."""
+        return clean_runs(self.output_dir, keep)
+
+    def _prepare(
+        self, folder_name: str | None, mode: str, **settings: object
+    ) -> tuple[Path, "McStas_instr"]:
+        """Pick the run folder and build the instrument with the settings every run shares.
+
+        Parameters
+        ----------
+        folder_name:
+            Run folder name. If ``None``, ``<time>_<mode>``.
+        mode:
+            What the run does, in the default folder name, e.g. ``"scan_omega"``.
+        **settings:
+            The run's own McStasScript settings, e.g. ``ncount`` and ``mpi``.
+
+        Returns
+        -------
+        :
+            The run folder, and the McStasScript instrument writing into it. A scan's points
+            write into folders of their own instead (:func:`_run_points_in_parallel`).
+        """
+        output_path = run_folder(self.output_dir, folder_name, mode)
+        inst = build_mcstas(self.instrument, input_path=self.input_dir)
+        inst.settings(
+            NeXus=True,
+            increment_folder_name=False,
+            suppress_output=True,
+            output_path=str(output_path),
+            force_compile=True,
+            **settings,  # pyright: ignore[reportArgumentType]
+        )
+        return output_path, inst
 
     def _sample_pos_name(self) -> str:
         """Return the name of the instrument's ``sample_pos``, where a split run cuts the beam.
@@ -295,18 +347,8 @@ class Simulation:
         :
             ``output_dir/<folder>/mccode.h5``.
         """
-        output_path = run_folder(self.output_dir, folder_name, "run")
-        inst = build_mcstas(self.instrument, input_path=self.input_dir)
-        inst.settings(
-            NeXus=True,
-            increment_folder_name=False,
-            suppress_output=True,
-            output_path=str(output_path),
-            ncount=ncount,
-            mpi=mpi,
-            force_compile=True,
-            seed=seed,
-            custom_flags=custom_flags,
+        output_path, inst = self._prepare(
+            folder_name, "run", ncount=ncount, mpi=mpi, seed=seed, custom_flags=custom_flags
         )
         inst.set_parameters(**instr_params)  # the rest keep the instrument's values
         inst.backengine()  # compiles in its input_dir
@@ -358,18 +400,13 @@ class Simulation:
             If a name is not an instrument parameter, before anything runs.
         """
         points = self.get_scan_points(variable, values, instr_params)  # checked before anything
-        output_path = run_folder(self.output_dir, folder_name, f"scan_{variable}")
-        inst = build_mcstas(self.instrument, input_path=self.input_dir)
-        inst.settings(
-            NeXus=True,
-            increment_folder_name=False,
-            suppress_output=True,
+        output_path, inst = self._prepare(
+            folder_name,
+            f"scan_{variable}",
             ncount=ncount,
-            # no MPI (None, though McStasScript hints str): the points run in parallel instead
-            mpi=None,  # pyright: ignore[reportArgumentType]
+            mpi=None,  # no MPI: the points run in parallel instead
             custom_flags=custom_flags,
         )
-
         return _run_points_in_parallel(inst, output_path, points, seed=seed, n_jobs=n_jobs)
 
     def run_to_sample(
@@ -409,17 +446,7 @@ class Simulation:
             If the instrument has no ``sample_pos``, before anything runs.
         """
         sample_pos = self._sample_pos_name()  # checked before anything
-        output_path = run_folder(self.output_dir, folder_name, "run_to_sample")
-        inst = build_mcstas(self.instrument, input_path=self.input_dir)
-        inst.settings(
-            NeXus=True,
-            increment_folder_name=False,
-            suppress_output=True,
-            output_path=str(output_path),
-            ncount=ncount,
-            mpi=mpi,
-            force_compile=True,
-        )
+        output_path, inst = self._prepare(folder_name, "run_to_sample", ncount=ncount, mpi=mpi)
         inst.set_parameters(**instr_params)  # the rest keep the instrument's values
         inst.run_to(
             sample_pos,
@@ -474,17 +501,7 @@ class Simulation:
         """
         sample_pos = self._sample_pos_name()  # checked before anything
         beam_file = self.find_beam_file(beam_file)
-        output_path = run_folder(self.output_dir, folder_name, "run_from_sample")
-        inst = build_mcstas(self.instrument, input_path=self.input_dir)
-        inst.settings(
-            NeXus=True,
-            increment_folder_name=False,
-            suppress_output=True,
-            output_path=str(output_path),
-            mpi=mpi,
-            force_compile=True,
-            seed=seed,
-        )
+        output_path, inst = self._prepare(folder_name, "run_from_sample", mpi=mpi, seed=seed)
         inst.run_from(sample_pos, filename=f'"{beam_file}"')
         inst.set_parameters(**instr_params)  # the rest keep the instrument's values
         inst.backengine()
@@ -540,14 +557,10 @@ class Simulation:
         points = self.get_scan_points(variable, values, instr_params)  # checked before anything
         sample_pos = self._sample_pos_name()
         beam_file = self.find_beam_file(beam_file)
-        inst = build_mcstas(self.instrument, input_path=self.input_dir)
-        inst.settings(
-            NeXus=True,
-            increment_folder_name=False,
-            suppress_output=True,
-            # no MPI (None, though McStasScript hints str): the points run in parallel instead
-            mpi=None,  # pyright: ignore[reportArgumentType]
+        output_path, inst = self._prepare(
+            folder_name,
+            f"scan_{variable}_from_sample",
+            mpi=None,  # no MPI: the points run in parallel instead
         )
         inst.run_from(sample_pos, filename=f'"{beam_file}"')
-        output_path = run_folder(self.output_dir, folder_name, f"scan_{variable}_from_sample")
         return _run_points_in_parallel(inst, output_path, points, seed=seed, n_jobs=n_jobs)
