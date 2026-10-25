@@ -6,10 +6,11 @@ Neutron instruments described as components, built and simulated in McStas (McSt
 tools to read the McStas NeXus output (McStasToX, scippneutron) and convert it to momentum transfer.
 It comes with a single-crystal diffractometer with a three-axis goniometer, and ready-made samples.
 
-The diffractometer seen from above, its goniometer arms as axes, drawn by McStasScript
-(`d.draw()` shows it, and the view from the side):
+The diffractometer with La2Ni7 at omega 30 deg, seen from above, its goniometer arms as axes, drawn by
+McStasScript (`d.draw()` shows it and the view from the side;
+`d.draw(("zx",), "output/top_view.png")` saves this one):
 
-![Top view of the diffractometer](output/top_view.svg)
+![Top view of the diffractometer](output/top_view_zx.png)
 
 An omega scan of La2Ni7 over 132 points, in momentum transfer, normalized (`scripts/plot_scan_Q.py`):
 

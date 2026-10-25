@@ -111,3 +111,10 @@ def test_mcstasscript_draws_the_top_and_side_views():
     cfg = Diffractometer(aluminum(at=[0, 0, 0], relative="gonio_phi"), Params(omega=30))
     cfg.draw()
     assert len(plt.get_fignums()) == 2
+
+
+def test_draw_saves_one_file_per_view(tmp_path):
+    cfg = Diffractometer(aluminum(at=[0, 0, 0], relative="gonio_phi"), Params(omega=30))
+    saved = cfg.draw(path=tmp_path / "view.png")
+    assert saved == [tmp_path / "view_zx.png", tmp_path / "view_zy.png"]
+    assert all(f.read_bytes().startswith(b"\x89PNG") for f in saved)
