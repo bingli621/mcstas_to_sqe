@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Any
 from mcstas_to_sqe.core.utils import format_value
 
 if TYPE_CHECKING:
-    from mcstasscript.interface.instr import McStas_instr
-
     from mcstas_to_sqe.core.base import Instrument
 
 
@@ -79,37 +77,6 @@ class Component:
         """
         skip = {"at", "rotated", "relative"}
         return {f.name: getattr(self, f.name) for f in fields(self) if f.name not in skip}
-
-    def add_to(self, instr: "McStas_instr") -> Any:
-        """Add the component to a McStasScript instrument.
-
-        It is added as McStas component :attr:`component_name`, named :attr:`name`, and placed
-        at ``at``/``rotated``/``relative``. Its McStas parameters are not set.
-
-        Parameters
-        ----------
-        instr:
-            The McStasScript instrument.
-
-        Returns
-        -------
-        :
-            The new McStasScript component.
-
-        Raises
-        ------
-        ValueError
-            If the component has no :attr:`name` yet, i.e. is not set on an instrument.
-        """
-        if self.name is None:
-            raise ValueError(f"a {self.component_name} with no name: set it on an instrument first")
-        return instr.add_component(
-            self.name,
-            self.component_name,
-            AT=list(self.at),
-            ROTATED=list(self.rotated),
-            RELATIVE=self.relative or "ABSOLUTE",  # of both AT and ROTATED
-        )
 
     def __repr__(self) -> str:
         """Show the McStas component and its values as a table, one row per field."""

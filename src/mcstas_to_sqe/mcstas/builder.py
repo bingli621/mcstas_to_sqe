@@ -3,8 +3,8 @@
 The instrument parameters are added first, then the components one by one in beam order, since
 McStas positions are relative to earlier components. Each component is:
 
-- added as its ``component_name``, named its ``name``, at its ``at``/``rotated``/``relative``
-  (``Component.add_to``);
+- added as its ``component_name``, named after its attribute in the instrument, at its
+  ``at``/``rotated``/``relative``;
 - given its McStas parameters (``Component.mcstas_parameters``: its fields plus what it
   computes). String parameters are quoted here.
 
@@ -47,37 +47,44 @@ def default_input_dir(instrument: "Instrument", work_dir: str | Path | None = No
     return Path(work_dir or default_work_dir()) / "mcstas_input" / instrument.name
 
 
-def _set_parameters(mcstas_comp: Any, component: "Component", instrument: "Instrument") -> None:
-    """Set the McStas parameters of a component on its McStasScript component.
+def _formatted_parameters(
+    mcstas_comp: Any, component: "Component", params: dict[str, Any]
+) -> dict[str, Any]:
+    """Return the McStas parameters of a component that its McStasScript component takes.
 
-    Each entry of ``component.mcstas_parameters(instrument)`` is one of:
+    Each entry of ``params`` (from ``component.mcstas_parameters``) must be one of:
 
-    - a McStas parameter: set, quoted if it is a string;
+    - a McStas parameter: kept, quoted if it is a string;
     - a field McStas does not take: left out, as the component only computes from it (e.g. the
-      detector's ``theta_bins``, put into its ``options``);
-    - neither, i.e. computed under a name McStas does not take: ``ValueError``, likely a typo.
+      detector's ``theta_bins``, put into its ``options``).
+
+    Anything else was computed under a name McStas does not take, likely a typo.
+
+    Returns
+    -------
+    :
+        The values to set, by McStas parameter name.
 
     Raises
     ------
     ValueError
-        Naming every computed parameter McStas does not take, before any is set.
+        Naming every computed parameter McStas does not take.
     """
     mcstas_names = set(mcstas_comp.parameter_names)  # what the McStas component takes
     field_names = {f.name for f in fields(component)}
-    all_params = component.mcstas_parameters(instrument)  # its fields, and what it computes
-
-    # checked before any is set, so the error names every one
-    if unknown := sorted(all_params.keys() - mcstas_names - field_names):
+    if unknown := sorted(params.keys() - mcstas_names - field_names):
         raise ValueError(
             f"{component.name} ({component.component_name}): no McStas parameter {unknown}"
         )
 
-    for name, value in all_params.items():
+    valid = {}
+    for name, value in params.items():
         if name not in mcstas_names:
             continue  # a field the component computes from: not for McStas
         if mcstas_comp.parameter_types[name] == "string":
             value = f'"{value}"'  # McStas takes a string as a quoted C string
-        setattr(mcstas_comp, name, value)  # McStasScript: one attribute per McStas parameter
+        valid[name] = value
+    return valid
 
 
 def build_mcstas(
@@ -106,7 +113,14 @@ def build_mcstas(
     for param in instrument.instr_params:
         mcstas_instr.add_parameter(**asdict(param))
 
-    for component in instrument.components.values():
-        mcstas_comp = component.add_to(mcstas_instr)  # placed: AT, ROTATED, RELATIVE
-        _set_parameters(mcstas_comp, component, instrument)
+    for name, component in instrument.components.items():
+        mcstas_comp = mcstas_instr.add_component(
+            name,
+            component.component_name,
+            AT=list(component.at),
+            ROTATED=list(component.rotated),
+            RELATIVE=component.relative or "ABSOLUTE",  # of both AT and ROTATED
+        )
+        params = component.mcstas_parameters(instrument)  # its fields, and what it computes
+        mcstas_comp.set_parameters(_formatted_parameters(mcstas_comp, component, params))
     return mcstas_instr
