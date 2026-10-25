@@ -4,27 +4,29 @@ run_mcstas.py simulates it.
 
 In VS Code: run this file, or from a notebook/Interactive Window:
 
-    from build_instrument import create_instrument, create_mcstas
+    from build_instrument import create_instrument, create_mcstas, plot_instrument
     scd = create_instrument()
     inst = create_mcstas(scd, plot=False)
     inst.show_diagram()
+    plot_instrument(inst)
 """
 
 from work_dir import WORK_DIR
 
 from mcstas_to_sqe.instruments import Params, SingleCrystalDiffractometer
 from mcstas_to_sqe.mcstas.builder import build_mcstas, default_input_dir
+from mcstas_to_sqe.mcstas.display import draw
 from mcstas_to_sqe.samples import la2ni7
 
 
-def create_instrument():
+def create_instrument(params=None):
     """Return the single-crystal diffractometer with the La2Ni7 sample, printing the sample,
     the instrument, its parameters and its source."""
     # the sample, in the innermost goniometer arm
     sample = la2ni7(mosaic=60, at=[0, 0, 0], relative="gonio_phi")
     print(sample)
 
-    scd = SingleCrystalDiffractometer(sample, Params(ei=14))
+    scd = SingleCrystalDiffractometer(sample, params=params or Params())
     print(scd)
     print(scd.params)
     print(scd.source)
@@ -50,6 +52,12 @@ def create_mcstas(instrument, input_path=None, plot=True):
     return inst
 
 
+def plot_instrument(instrument, **kwargs):
+    """Show `instrument` from above and from the side with McStasScript."""
+    draw(instrument, **kwargs)
+
+
 if __name__ == "__main__":
-    scd = create_instrument()
-    create_mcstas(scd)
+    scd = create_instrument(params=Params(omega=30))
+    inst = create_mcstas(scd, plot=False)
+    plot_instrument(inst)

@@ -1,5 +1,6 @@
 from dataclasses import FrozenInstanceError
 
+import matplotlib.pyplot as plt
 import pytest
 
 from mcstas_to_sqe.core import Slit, Source_simple
@@ -103,10 +104,10 @@ def test_a_component_saves_its_mcstas_component_when_created():
     assert slit == Slit(xwidth=0.01, yheight=0.01, at=[0, 0, 1.0])  # nor compared
 
 
-def test_the_top_view_marks_the_goniometer_axes_in_order(tmp_path):
+@pytest.mark.filterwarnings("ignore:FigureCanvasAgg is non-interactive")
+def test_mcstasscript_draws_the_top_and_side_views():
+    plt.switch_backend("Agg")  # no windows
+    plt.close("all")
     cfg = Diffractometer(aluminum(at=[0, 0, 0], relative="gonio_phi"), Params(omega=30))
-    text = cfg.plot_top_view(tmp_path / "top.svg")
-    assert text.startswith("<svg") and text.endswith("</svg>")
-    assert (tmp_path / "top.svg").read_text(encoding="utf-8") == text
-    assert all(f">{label}<" in text for label in ("1 ω", "2 χ", "3 φ"))
-    assert text.count("<circle") == 1  # the sample
+    cfg.draw()
+    assert len(plt.get_fignums()) == 2

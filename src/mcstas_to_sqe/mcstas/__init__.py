@@ -1,1 +1,1 @@
-"""Everything that talks to McStas: building the instrument and running simulations."""
+"""Everything that talks to McStas: building the instrument, running simulations and drawing it."""

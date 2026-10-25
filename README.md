@@ -6,8 +6,8 @@ Neutron instruments described as components, built and simulated in McStas (McSt
 tools to read the McStas NeXus output (McStasToX, scippneutron) and convert it to momentum transfer.
 It comes with a single-crystal diffractometer with a three-axis goniometer, and ready-made samples.
 
-The diffractometer seen from above, its goniometer axes numbered outermost first
-(`d.plot_top_view("output/top_view.svg")`):
+The diffractometer seen from above, its goniometer arms as axes, drawn by McStasScript
+(`d.draw()` shows it, and the view from the side):
 
 ![Top view of the diffractometer](output/top_view.svg)
 
@@ -87,8 +87,8 @@ src/mcstas_to_sqe/
   instruments/   the instruments, one package each (diffractometer/)
   samples/       ready-made samples (aluminum, la2ni7) and their CIF files
   io/            instruments to and from dicts and YAML files
-  mcstas/        build the McStasScript instrument, run simulations, read NeXus output, run folders
-  plot/          top view of any instrument
+  mcstas/        build the McStasScript instrument, run simulations, read NeXus output, run folders,
+                 show the top and side views
   reduction/     to Q, sample frame, solid-angle normalization, find_peaks
 scripts/         build, run, plot and print peaks
 tests/
@@ -98,7 +98,7 @@ output/          figures and peak lists
 ```
 
 Dependencies point inwards: `core` imports nothing from the other layers; `instruments` and
-`samples` build on it; `io`, `mcstas`, `plot` and `reduction` are adapters that work with any
+`samples` build on it; `io`, `mcstas` and `reduction` are adapters that work with any
 instrument.
 
 Outputs go to the work folder: the current folder for the library, the repository for the
