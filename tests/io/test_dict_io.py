@@ -113,3 +113,11 @@ def test_a_complete_dict_must_name_its_instrument():
     del data["instrument"]
     with pytest.raises(ValueError, match="instrument: None"):
         from_dict(data)
+
+
+@pytest.mark.parametrize("name", ["positions", "update_params", "components", "_params"])
+def test_a_section_named_like_an_attribute_of_the_instrument_is_refused(name):
+    data = to_dict(SingleCrystalDiffractometer())
+    data[name] = {"component": "Arm", "at": [0, 0, 0]}
+    with pytest.raises(ValueError, match=f"{name}: reserved name"):
+        from_dict(data)

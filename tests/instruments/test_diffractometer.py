@@ -101,3 +101,20 @@ def test_a_component_saves_its_mcstas_component_when_created():
     assert slit.component_name == "Slit"
     assert "component_name" not in to_dict(Diffractometer())["slit"]  # not saved
     assert slit == Slit(xwidth=0.01, yheight=0.01, at=[0, 0, 1.0])  # nor compared
+
+
+@pytest.mark.parametrize("name", ["positions", "instr_params", "name", "params_class", "_params"])
+def test_a_component_cannot_replace_an_attribute_of_the_instrument(name):
+    d = Diffractometer()
+    with pytest.raises(ValueError, match=f"{name}: reserved name"):
+        setattr(d, name, Slit(xwidth=0.01, yheight=0.01, at=[0, 0, 1.0]))
+    assert d.positions()["slit"] == pytest.approx([0, 0, 1.0])  # unchanged
+
+
+def test_a_component_may_replace_a_component_or_fill_an_empty_place():
+    d = Diffractometer()
+    d.slit = Slit(xwidth=0.02, yheight=0.02, at=[0, 0, 1.0], relative="source")  # replaces
+    d.sample = aluminum(at=[0, 0, 0], relative="gonio_phi")  # was None
+    assert d.slit.xwidth == 0.02 and "sample" in d.components
+    d.extra = Slit(xwidth=0.01, yheight=0.01, at=[0, 0, 0])  # a new name
+    assert "extra" in d.components
