@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mcstas_to_sqe"
 dynamic = ["version"]  # from src/mcstas_to_sqe/__init__.py, see [tool.hatch.version]
-description = "Neutron instruments simulated in McStas from their components, and single-crystal diffraction scans reduced to momentum transfer and Miller indices"
+description = "Neutron instruments simulated in McStas from their components, with an example of a single-crystal diffraction scan reduced to momentum transfer and Miller indices"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Bing Li", email = "bing.li@ess.eu" }]
