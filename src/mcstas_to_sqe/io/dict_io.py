@@ -34,10 +34,13 @@ Rules:
 - A bare number stands for the value: ``ei: 25`` is ``ei: {value: 25}``.
 - A component value that an instrument parameter provides is the parameter's name, as in McStas
   (``rotated: [0, omega, 0]``).
+- The components are built in the order of their sections, which is the order McStas traces
+  them. A component's ``relative`` must name a component of an earlier section, as in McStas.
+  ``position`` plays no part in the order.
 
 Errors raise ``ValueError`` saying where: ``instrument: ...``, ``params.ei: ...``,
-``slit: ...``. They cover an unknown or missing instrument class, and an unknown param, unit,
-component class or component parameter.
+``slit: ...``. They cover an unknown or missing instrument class; an unknown param, unit,
+component class or component parameter; and a ``relative`` that names no earlier component.
 """
 
 import copy
@@ -45,7 +48,7 @@ from dataclasses import asdict, fields
 from typing import Any
 
 from mcstas_to_sqe import instruments  # noqa: F401  (adds every instrument to INSTRUMENTS)
-from mcstas_to_sqe.core import INSTRUMENTS, Instrument
+from mcstas_to_sqe.core import INSTRUMENTS, Component, Instrument
 from mcstas_to_sqe.core.components import COMPONENTS
 
 
@@ -74,10 +77,10 @@ def to_dict(instrument: Instrument) -> dict:
 def from_dict(data: dict) -> Instrument:
     """Create an instrument from its complete nested dict.
 
-    The order of the sections does not matter. The instrument is created with ``params`` alone,
-    and each section then replaces the component of its name, in that component's place in the
-    beam. A component the class leaves at ``None``, such as the diffractometer's sample when
-    there is none, keeps its place too.
+    The instrument is created with ``params`` alone, and its components are then replaced by
+    those of the sections, in the order of the sections: that is the beam order. A component of
+    the class that has no section is left out (set to ``None``, as the diffractometer's sample
+    when there is none). The lab-frame ``position`` a section may hold is not read.
 
     Parameters
     ----------
@@ -93,17 +96,19 @@ def from_dict(data: dict) -> Instrument:
     ------
     ValueError
         If the instrument class is missing or unknown; if a param, a unit, a component class
-        or a component parameter is unknown; or if a component lacks a required parameter.
+        or a component parameter is unknown; if a component lacks a required parameter; or if
+        a component's ``relative`` names no component of an earlier section.
     KeyError
         If ``data`` has no ``params`` or no ``name``.
     """
     instrument_class = _instrument_class(data)
     data = copy.deepcopy(data)  # the components get its lists: not shared with the caller
     params = _params_from_dict(data["params"], instrument_class.params_class)
+    components = _components_from_dict(data)
+    _check_relatives(components)
     instrument = instrument_class(params=params)
     instrument.name = data["name"]
-    for name, component in _components_from_dict(data).items():
-        setattr(instrument, name, component)  # replaces the default one, in its place in the beam
+    _set_components(instrument, components)
     return instrument
 
 
@@ -149,6 +154,11 @@ def merge(defaults: dict, overrides: dict) -> dict:
 
     A key that ``overrides`` leaves out keeps its default.
 
+    The keys of ``defaults`` keep their order. A key that only ``overrides`` has is put right
+    after the key before it in ``overrides`` (first, if it is the first key there). So a
+    component section a parameters file adds lands where the file puts it in the beam: after
+    the section written above it.
+
     Parameters
     ----------
     defaults:
@@ -165,15 +175,28 @@ def merge(defaults: dict, overrides: dict) -> dict:
     --------
     >>> merge({"a": 1, "b": {"c": 2, "d": 3}}, {"b": {"c": 5}, "a": None})
     {'a': 1, 'b': {'c': 5, 'd': 3}}
+    >>> merge({"a": 1, "c": 3}, {"a": 1, "b": 2})
+    {'a': 1, 'b': 2, 'c': 3}
     """
     merged = copy.deepcopy(defaults)
+    previous = None  # the key before `key` in `overrides`, already in `merged`
     for key, override in overrides.items():
-        default = merged.get(key)
-        if isinstance(override, dict) and isinstance(default, dict):
-            merged[key] = merge(default, override)
-        elif override is not None or key not in merged:
+        if key not in merged:
+            merged = _insert_after(merged, previous, key, copy.deepcopy(override))
+        elif isinstance(override, dict) and isinstance(merged[key], dict):
+            merged[key] = merge(merged[key], override)
+        elif override is not None:
             merged[key] = copy.deepcopy(override)
+        previous = key
     return merged
+
+
+def _insert_after(data: dict, after: Any, key: Any, value: Any) -> dict:
+    """Return a copy of ``data`` with ``key`` inserted right after ``after`` (first if None)."""
+    items = list(data.items())
+    index = 0 if after is None else list(data).index(after) + 1
+    items.insert(index, (key, value))
+    return dict(items)
 
 
 def _instrument_class(data: dict) -> type[Instrument]:
@@ -290,3 +313,42 @@ def _components_from_dict(data: dict, component_classes: dict = COMPONENTS) -> d
         except TypeError as error:  # a parameter the class does not take, or one it lacks
             raise ValueError(f"{name}: {error}") from error
     return built
+
+
+def _check_relatives(components: dict[str, Component]) -> None:
+    """Check that every ``relative`` names a component that comes earlier, as McStas requires.
+
+    Parameters
+    ----------
+    components:
+        The components by name, in beam order.
+
+    Raises
+    ------
+    ValueError
+        Naming the component whose ``relative`` names no component, or a later one.
+    """
+    earlier = set()
+    for name, component in components.items():
+        relative = component.relative
+        if relative is not None and relative not in earlier:
+            where = "comes after it" if relative in components else "is no component"
+            raise ValueError(f"{name}: relative {relative!r} {where}")
+        earlier.add(name)
+
+
+def _set_components(instrument: Instrument, components: dict[str, Component]) -> None:
+    """Make ``components``, in their order, the components of ``instrument``.
+
+    An instrument's components are its attributes in the order they were first set, so its own
+    components (and a placeholder left at ``None``, such as the diffractometer's sample) are
+    removed first and the new ones set in order. One of its own that ``components`` lacks is set
+    back to ``None``, after them.
+    """
+    own = {n: v for n, v in vars(instrument).items() if isinstance(v, Component) or v is None}
+    for name in own:
+        delattr(instrument, name)
+    for name, component in components.items():
+        setattr(instrument, name, component)
+    for name in own.keys() - components.keys():
+        setattr(instrument, name, None)

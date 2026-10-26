@@ -45,6 +45,31 @@ def test_a_file_is_laid_over_the_code(tmp_path):
     assert d.positions()["sample_pos"] == [0, 0, 2.0]  # as built
 
 
+def test_a_component_a_file_adds_is_built_where_the_file_puts_it(tmp_path):
+    write_yaml(
+        {
+            "instrument": "SingleCrystalDiffractometer",
+            "source": {"radius": 0.02},
+            "extra_slit": {
+                "component": "Slit",
+                "xwidth": 0.01,
+                "yheight": 0.01,
+                "at": [0, 0, 0.5],
+                "relative": "source",
+            },
+        },
+        tmp_path / "extra.yaml",
+    )
+    d = load(tmp_path / "extra.yaml")
+    assert list(d.components)[:4] == ["origin", "source", "extra_slit", "slit"]
+
+
+def test_the_sample_of_params_yaml_is_built_before_the_detector():
+    """params.yaml is laid over the diffractometer with no sample: its sample section is new,
+    and is built where the file has it, not at the end."""
+    assert list(load(PARAMS_FILE).components)[-2:] == ["sample", "detector"]
+
+
 def test_the_diffractometer_roundtrips_through_a_yaml_file(diffractometer, tmp_path):
     inst = diffractometer({"detector": {"radius": 0.8}})
     write_yaml(to_dict(inst), tmp_path / "out.yaml")
