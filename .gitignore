@@ -4,6 +4,7 @@ __pycache__/
 dist/
 mcstas_input/
 mcstas_output/
+output/
 .pytest_cache/
 .DS_Store
 .coverage

@@ -10,11 +10,11 @@ The diffractometer with La2Ni7 at omega 30 deg, seen from above, its goniometer 
 McStasScript (`inst.show_instrument(backend="matplotlib_2d", projection="zx")`;
 `projection="zy"` for the view from the side):
 
-![Top view of the diffractometer](output/top_view_zx.png)
+![Top view of the diffractometer](docs/top_view_zx.png)
 
 An omega scan of La2Ni7 over 132 points, in the (2H, H, L) plane, normalized (`scripts/plot_scan_hkl.py`):
 
-![Normalized (2H, H, L) map of an omega scan](output/scan_hkl_normalized.gif)
+![Normalized (2H, H, L) map of an omega scan](docs/scan_hkl_normalized.gif)
 
 ## Use
 
@@ -96,7 +96,8 @@ scripts/         build, run, plot and print peaks
 tests/
 mcstas_input/    generated McStas files, per instrument (git-ignored)
 mcstas_output/   simulation results, a folder per run (git-ignored)
-output/          figures and peak lists
+output/          figures and peak lists the scripts make (git-ignored)
+docs/            the README's images
 ```
 
 Dependencies point inwards: `core` imports nothing from the other layers; `instruments` and

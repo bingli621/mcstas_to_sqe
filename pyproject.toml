@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcstas_to_sqe"
-version = "0.1.0"
-description = "mcstas_to_sqe"
+dynamic = ["version"]  # from src/mcstas_to_sqe/__init__.py, see [tool.hatch.version]
+description = "Neutron instruments simulated in McStas from their components, and single-crystal diffraction scans reduced to momentum transfer and Miller indices"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Bing Li", email = "bing.li@ess.eu" }]
@@ -25,9 +25,17 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest>=9.1.1", "pytest-cov>=7.1.0"]
 
+[tool.hatch.version]
+# the one place the version is set: __version__ in the package
+path = "src/mcstas_to_sqe/__init__.py"
+
 [tool.hatch.metadata]
 # mcstastox is not on PyPI; it is pinned to a git commit
 allow-direct-references = true
+
+[tool.hatch.build.targets.sdist]
+# the README's images are for GitHub, not for the source distribution
+exclude = ["docs/"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcstas_to_sqe"]

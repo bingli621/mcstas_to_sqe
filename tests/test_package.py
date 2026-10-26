@@ -1,3 +1,4 @@
+import importlib.metadata
 from pathlib import Path
 
 import mcstas_to_sqe
@@ -6,6 +7,11 @@ from mcstas_to_sqe import default_figures_dir
 
 def test_version():
     assert mcstas_to_sqe.__version__
+
+
+def test_the_package_metadata_takes_its_version_from_the_package():
+    """pyproject.toml reads the version from __version__: it is set in one place only."""
+    assert importlib.metadata.version("mcstas_to_sqe") == mcstas_to_sqe.__version__
 
 
 def test_the_figures_are_in_the_work_folder(tmp_path, monkeypatch):

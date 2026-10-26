@@ -3,7 +3,6 @@ authors = ["Bing Li <bing.li@ess.eu>"]
 channels = ["conda-forge"]
 name = "mcstas_to_sqe"
 platforms = ["osx-arm64", "linux-64"]
-version = "0.1.0"
 
 [tasks]
 
