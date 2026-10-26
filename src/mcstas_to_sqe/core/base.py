@@ -59,8 +59,23 @@ class Instrument:
         INSTRUMENTS[cls.__name__] = cls
 
     def __setattr__(self, attr: str, value: Any) -> None:
-        """Set an attribute, naming a component after the attribute it is set on."""
+        """Set an attribute, naming a component after the attribute it is set on.
+
+        Raises
+        ------
+        ValueError
+            If ``value`` is a component and ``attr`` is already taken by something that is not
+            a component: a method, a property or another attribute of the instrument (e.g.
+            ``positions``, ``name``, ``_params``). The component would replace it.
+        """
         if isinstance(value, Component):
+            current = vars(self).get(attr)
+            taken = hasattr(type(self), attr) or not isinstance(current, Component | None)
+            if taken:
+                raise ValueError(
+                    f"{attr}: reserved name, already used by {type(self).__name__}; "
+                    "give the component another name"
+                )
             value.name = attr
         super().__setattr__(attr, value)
 
