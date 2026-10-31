@@ -2,14 +2,14 @@
 authors = ["Bing Li <bing.li@ess.eu>"]
 channels = ["conda-forge"]
 name = "mcstas_to_sqe"
-platforms = ["osx-arm64", "linux-64"]
+platforms = [{ name = "my-osx-arm64", platform = "osx-arm64", macos = "14.0" }, "linux-64"]
 
 [tasks]
 
 [dependencies]
 mcstas = ">=3.10.0,<4"
 mcstasscript = ">=0.0.96,<0.0.97"
-scipp = ">=25.12.0,<27"
+scipp = ">=26.9.0,<27"
 pytest = ">=9.1.1,<10"
 scippneutron = ">=26.10.0,<27"
 matplotlib = ">=3.11.2,<4"
